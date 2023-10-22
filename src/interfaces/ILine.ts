@@ -1,7 +1,8 @@
-import IVertex from "./IVertex";
+
+import {IPixel} from "./IPixel";
 
 
 export interface ILine {
-    vertexes: IVertex[]
+    vertexes: IPixel[]
     color: string
 }
