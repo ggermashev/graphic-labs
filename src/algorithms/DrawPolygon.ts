@@ -15,10 +15,11 @@ export default function DrawPolygon(vertexes: IVertex[], color: string): IPolygo
     let lastVertex = vertexes.at(-1);
 
     if (lastVertex && vertexes.length > 2) {
-        lines.push(DrawLine(firstVertex, lastVertex, color))
+        lines.push(DrawLine(lastVertex, firstVertex, color))
     }
 
     const polygon: IPolygon = {
+        id: Math.random()*1e9,
         lines: lines,
         color: color
     }
