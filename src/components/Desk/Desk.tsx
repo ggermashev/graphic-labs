@@ -120,7 +120,7 @@ const Desk = () => {
         context.clearRect(left, top, width,height);
     }, [])
 
-    const drawPixel = useCallback((x: number, y: number, color: string) => {
+    const drawPixel = useCallback((x: number, y: number, color: string, w=1, h=1) => {
         const canvas = document.querySelector('#canvas');
         
         const height = window.innerHeight
@@ -128,7 +128,7 @@ const Desk = () => {
         const context = canvas.getContext('2d');
         context.fillStyle = color || '#000';
     
-        context.fillRect(x, height - y, 1, 1);
+        context.fillRect(x, height - y, w, h);
     }, [])
 
     useEffect(() => {
@@ -169,7 +169,7 @@ const Desk = () => {
                 const x = e.clientX
                 const y = h - e.clientY
                 const color = "white"
-                drawPixel(x, y, "red")
+                drawPixel(x, y, "red", 5, 5)
                 setPixelsToConnect([...pixelsToConnect, {x, y, color}])
             }
         }}>
