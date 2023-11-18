@@ -1,11 +1,11 @@
 import {css, styled} from "styled-components"
 
-interface IPolygon {
-  $editMode: boolean
+interface IBox {
+  $isEditing: boolean
 }
 
 interface IDesk {
-  $editMode: boolean
+  $isEditing: boolean
 }
 
 const DeskStyled = styled.div<IDesk>`
@@ -19,7 +19,7 @@ const DeskStyled = styled.div<IDesk>`
   align-items: center;
   justify-content: center;
 
-  ${props => props.$editMode && css`
+  ${props => props.$isEditing && css`
       cursor: pointer;
     `}
   
@@ -42,7 +42,7 @@ const DeskStyled = styled.div<IDesk>`
     height: 1.5em;
     width: 1.5em;
 
-    ${props => !props.$editMode && css`
+    ${props => !props.$isEditing && css`
       color: white;
       @media(hover:hover) {
         &:hover {
@@ -51,7 +51,7 @@ const DeskStyled = styled.div<IDesk>`
       }
     `}
 
-    ${props => props.$editMode && css`
+    ${props => props.$isEditing && css`
       color: yellow;
       @media(hover:hover) {
         &:hover {
@@ -64,12 +64,12 @@ const DeskStyled = styled.div<IDesk>`
   
 `
 
-const Polygon = styled.div<IPolygon>`
+const Box = styled.div<IBox>`
   position: absolute;
   opacity: 0;
   background-color: white;
 
-  ${props => !props.$editMode && css`
+  ${props => !props.$isEditing && css`
     &:hover {
       opacity: 0.1;
       cursor: pointer;
@@ -108,4 +108,4 @@ const DeleteMenu = styled.div`
 const TypeMenu = styled.div`
 `
 
-export {DeskStyled, Polygon, MenuStyled, FillMenu, DeleteMenu, TypeMenu}
+export {DeskStyled, Box, MenuStyled, FillMenu, DeleteMenu, TypeMenu}

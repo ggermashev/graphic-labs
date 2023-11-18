@@ -56,6 +56,7 @@ export default function DrawLine(start: IVertex, end: IVertex, color?: string): 
     }
 
     const line: ILine = {
+        id: Math.random(),
         vertexes: pixels,
         color: color
     };

@@ -1,6 +1,6 @@
 import {IPolygon} from "../interfaces/IPolygon";
 import {ILine} from "../interfaces/ILine";
-import {areIntersecting} from "./utils";
+import {areIntersecting, getPointSideForLine} from "./utils";
 
 export function getPolygonType(polygon: IPolygon) {
     return {
@@ -31,25 +31,16 @@ function isConvex(polygon: IPolygon) {
             const checkedLine = lines[j]
 
             for (let vertex of checkedLine.vertexes) {
-                const delta = vertex.y - k * vertex.x - b
-                if (delta === 0) {
+                const side = getPointSideForLine(vertex, line)
+                
+                if (!side) {
                     continue
                 }
                 if (!initialSide) {
-                    if (delta > 0) {
-                        initialSide = "left"
-                    } else {
-                        initialSide = "right"
-                    }
+                    initialSide = side
                 }
                 else {
-                    let currSide: typeof initialSide
-                    if (delta > 0) {
-                        currSide = "left"
-                    } else {
-                        currSide = "right"
-                    }
-                    if (currSide !== initialSide) {
+                    if (side !== initialSide) {
                         return false
                     }
                 }

@@ -31,8 +31,6 @@ function fillEvenOdd(polygon: IPolygon, color: string) {
 
     const {left, top, right, bottom} = getPolygonBorders(polygon)
 
-    console.log(`polygon border: ${left} ${top} ${right} ${bottom}`)
-
     let x = 0;
     let y = 0;
     let intersectingPoints: IVertex[] = []
@@ -56,8 +54,6 @@ function fillEvenOdd(polygon: IPolygon, color: string) {
     }
 
     generateRay()
-
-    console.log(`intersecting points: `, intersectingPoints)
 
     const coloredVertexes: IPixel[] = []
 
@@ -102,7 +98,6 @@ export function fillNonZeroWinding(polygon: IPolygon, color: string) {
         return
     }
     const lines = polygon.lines
-    console.log(lines)
     const vertexes = lines.map(line => {
         return line.vertexes
     }).flat()
