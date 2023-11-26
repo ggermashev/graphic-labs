@@ -4,7 +4,7 @@ import IVertex from "../interfaces/IVertex";
 import DrawLine from "./DrawLine";
 import { copyVertex, isEqual } from "./utils";
 
-export function DrawBezierCurve(vertexes: IVertex[], color="white"): ICurve | undefined {
+export default function DrawBezierCurve(vertexes: IVertex[], color="white"): ICurve | undefined {
     if (vertexes.length !== 4) {
         alert("must be 4 points")
         return
@@ -42,5 +42,5 @@ export function DrawBezierCurve(vertexes: IVertex[], color="white"): ICurve | un
         id: Math.random(),
         lines,
         color
-    } as ICurve
+    } 
 }

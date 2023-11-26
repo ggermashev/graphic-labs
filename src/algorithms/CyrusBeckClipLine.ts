@@ -1,13 +1,14 @@
 import { ILine } from "../interfaces/ILine";
 import { IPolygon } from "../interfaces/IPolygon";
 import DrawLine from "./DrawLine";
-import { getPolygonType } from "./GetPolygonType";
+import getPolygonType from "./GetPolygonType";
 import { areIntersecting, areParallel, getLinesIntersectionType, getPointSideForLine, getPolygonBorders, isPolygonClockWise } from "./utils";
 
-export function CyrusBeckClipLine(line: ILine, polygon: IPolygon): ILine | undefined {
+export default function CyrusBeckClipLine(line: ILine, polygon: IPolygon): ILine | undefined {
     const n = polygon.lines.length
 
     if (!getPolygonType(polygon).isConvex) {
+        alert("polygon should be convex")
         return;
     }
 
@@ -49,7 +50,7 @@ export function CyrusBeckClipLine(line: ILine, polygon: IPolygon): ILine | undef
         }
 
         if (linesIntersectionType === "parallel") {
-            if (getPointSideForLine(start, polygon.lines[i]) === "left") {
+            if (getPointSideForLine(start, polygon.lines[i]) === "right") {
                 return;
             }
         }
@@ -74,6 +75,8 @@ export function CyrusBeckClipLine(line: ILine, polygon: IPolygon): ILine | undef
         }
         
     }
+
+    console.log(t1, t2)
 
     if (t1 < t2) {
         x1_new = Math.round(x1 + t1 * (x2 - x1))

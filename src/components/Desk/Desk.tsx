@@ -1,6 +1,6 @@
 import EditIcon from '@mui/icons-material/Edit';
 import React, {FC, useCallback, useEffect, useState} from 'react';
-import {DeskStyled, Box, MenuStyled, FillMenu, DeleteMenu, TypeMenu} from "./Desk.styled";
+import {DeskStyled, Box, MenuStyled, FillMenu, DeleteMenu, TypeMenu, BoundingMenu} from "./Desk.styled";
 import {IPixel} from "../../interfaces/IPixel";
 import DrawPolygon from "../../algorithms/DrawPolygon";
 import {ILine} from "../../interfaces/ILine";
@@ -9,16 +9,20 @@ import {fillPolygonColor} from "../../algorithms/FillPolygon";
 import {getPolygonBorders, getCurveBorders} from "../../algorithms/utils";
 import ModalWindow from "../ModalWindow/ModalWindow";
 import Button from "../../ui/Button/Button";
-import {getPolygonType} from "../../algorithms/GetPolygonType";
+import getPolygonType from "../../algorithms/GetPolygonType";
 import { HexColorPicker } from "react-colorful";
 import Select from '../../ui/Select/Select';
 import Pixel from '../Pixel/Pixel';
 import DrawLine from '../../algorithms/DrawLine';
-import { DrawBezierCurve } from '../../algorithms/DrawBezierCurve';
+import  DrawBezierCurve  from '../../algorithms/DrawBezierCurve';
 import { ICurve } from '../../interfaces/ICurve';
-import { CyrusBeckClipLine } from '../../algorithms/CyrusBeckClipLine';
+import  CyrusBeckClipLine from '../../algorithms/CyrusBeckClipLine';
+import getConvexBounding from "../../algorithms/GetConvexBounding"
+import drawHermiteCompoundCurve, { IVector } from '../../algorithms/DrawHermiteCompoundCurve';
+import IVertex from '../../interfaces/IVertex';
 
-type TEditMode = "line" | "polygon" | "curve" | undefined
+
+type TEditMode = "line" | "polygon" | "bezier_curve" | "hermite_curve" | undefined
 
 
 interface ILineMenu {
@@ -50,9 +54,6 @@ const LineMenu: FC<ILineMenu> =({pixels, setPixels, lines, setLines, isVisible, 
                         const height = bottom - top
                         clearCanvas(left, top, width, height)
                         setLines(lines.filter(line => line.id !== lineId))
-                        setPixels(pixels.filter(pixel => {
-                            return (pixel.x < left || pixel.x > right) && (pixel.y < top || pixel.y > bottom)
-                        }))
                         setIsVisible(false)
                     }}>
                         Удалить
@@ -104,7 +105,6 @@ const PolygonMenu: FC<IPolygonMenu> =({pixels, setPixels, polygons, setPolygons,
             <MenuStyled>
                 
                 <FillMenu>
-                    {/* Закрасить */}
                     <Button onClick={() => {
                         if (polygonId) {
                             const polygon = polygons.filter(polygon => polygon.id === polygonId)[0]
@@ -118,9 +118,33 @@ const PolygonMenu: FC<IPolygonMenu> =({pixels, setPixels, polygons, setPolygons,
                     <HexColorPicker className='color-picker' color={color} onChange={setColor} />
                 </FillMenu>
 
+                <TypeMenu>
+                    <Button onClick={() => {
+                        const polygon = polygons.filter(polygon => polygon.id === polygonId)[0]
+                        const {isConvex, isSimple} = getPolygonType(polygon, true)
+                        setIsVisible(false)
+                        alert(`${isConvex ? "Выпуклый" : "Невыпуклый"}\n${isSimple ? "Простой" : "Сложный"}`)
+                    }}>
+                        Тип
+                    </Button>
+                </TypeMenu>
+
+                <BoundingMenu>
+                    <Button onClick={() => {
+                        const polygon = polygons.filter(polygon => polygon.id === polygonId)[0]
+
+                        const boundingPolygon = getConvexBounding(polygon)
+                        if (boundingPolygon) {
+                            setPolygons([...polygons, boundingPolygon])
+                        }
+                        
+                        setIsVisible(false)
+                    }}>
+                        Оболочка
+                    </Button>
+                </BoundingMenu>
 
                 <DeleteMenu>
-                    {/* Удалить */}
                     <Button onClick={() => {
                         const polygon = polygons.filter(polygon => polygon.id === polygonId)[0]
                         const {left, top, right, bottom} = getPolygonBorders(polygon)
@@ -136,18 +160,6 @@ const PolygonMenu: FC<IPolygonMenu> =({pixels, setPixels, polygons, setPolygons,
                         Удалить
                     </Button>
                 </DeleteMenu>
-
-                <TypeMenu>
-                    {/* Тип */}
-                    <Button onClick={() => {
-                        const polygon = polygons.filter(polygon => polygon.id === polygonId)[0]
-                        const {isConvex, isSimple} = getPolygonType(polygon)
-                        setIsVisible(false)
-                        alert(`${isConvex ? "Выпуклый" : "Невыпуклый"}\n${isSimple ? "Простой" : "Сложный"}`)
-                    }}>
-                        Тип
-                    </Button>
-                </TypeMenu>
             </MenuStyled>
         </ModalWindow>
     )
@@ -226,11 +238,19 @@ const DrawMenu: FC<IDrawMenu> = ({isVisible, setIsVisible, setEditMode, setIsEdi
                 </Button>
 
                 <Button onClick={() => {
-                    setEditMode("curve")
+                    setEditMode("bezier_curve")
                     setIsEditing(true)
                     setIsVisible(false)
                 }}>
-                    Кривая
+                    Кривая Безье
+                </Button>
+
+                <Button onClick={() => {
+                    setEditMode("hermite_curve")
+                    setIsEditing(true)
+                    setIsVisible(false)
+                }}>
+                    Составная кривая Эрмита
                 </Button>
 
             </MenuStyled>
@@ -260,6 +280,11 @@ const Desk = () => {
     const [editMode, setEditMode] = useState<TEditMode>()
     const [isEditing, setIsEditing] = useState(false)
     const [pixelsToConnect, setPixelsToConnect] = useState<IPixel[]>([])
+    const [vectorsToConnect, setVectorsToConnect] = useState<IVector[]>([])
+    const [vectorToConnect, setVectorToConnect] = useState<IVector>()
+    const [vectorId, setVectorId] = useState(-1)
+
+    const [mouseIsDown, setMouseIsDown] = useState(false)
 
     const clearCanvas = useCallback((left=0, top=0, width?: number, height?: number) => {
         const canvas = document.querySelector('#canvas');
@@ -288,15 +313,19 @@ const Desk = () => {
         context.fillRect(x, height - y, w, h);
     }, [])
 
-    const drawLine = useCallback(() => {
+    const drawLine = useCallback((color="white", id?: number, clearPixels=true) => {
         if (pixelsToConnect.length == 2) {
-            const line = DrawLine(pixelsToConnect[0], pixelsToConnect[1], "white")
-            setLines([...lines, line])
+            const line = DrawLine(pixelsToConnect[0], pixelsToConnect[1], color, id)
+            setLines([...lines.filter(line => line.id !== vectorId), line])
         } else {
             alert("number of points must be 2")
             setLines([...lines])
         }
-        setPixelsToConnect([])
+
+        if (clearPixels) {
+            setPixelsToConnect([])
+        }
+        
     }, [pixelsToConnect])
 
     const clipLine = useCallback(() => {
@@ -330,7 +359,7 @@ const Desk = () => {
         setPixelsToConnect([])
     }, [pixelsToConnect])
 
-    const drawCurve = useCallback(() => {
+    const drawBezierCurve = useCallback(() => {
         if (pixelsToConnect.length) {
             const curve = DrawBezierCurve(pixelsToConnect, "white")
             if (!curve) {
@@ -343,13 +372,23 @@ const Desk = () => {
         setPixelsToConnect([])
     }, [pixelsToConnect])
 
+    const drawHermiteCurve = useCallback(() => {
+        if (vectorsToConnect) {
+            const curve = drawHermiteCompoundCurve(vectorsToConnect)
+            if (curve) {
+                setCurves([...curves, curve])
+                setLines(lines.filter(line => line.id > 0))
+            }
+        }
+        setPixelsToConnect([])
+        setVectorsToConnect([])
+        setVectorId(-1)
+    }, [vectorsToConnect])
+
     useEffect(() => {
         const canvas = document.querySelector('#canvas');
         canvas?.setAttribute('height', `${window.innerHeight}`)
         canvas?.setAttribute('width', `${window.innerWidth}`)
- 
-        checkDrawLine()
-
     }, [])
 
     useEffect(() => {
@@ -360,19 +399,19 @@ const Desk = () => {
 
         lines.forEach(line => {
             line.vertexes.forEach(pixel => {
-                drawPixel(pixel.x, pixel.y, pixel.color)
+                drawPixel(pixel.x, pixel.y, line.color)
             })
         })
 
         polygons.forEach(polygon => {
             polygon.lines.forEach(line => {
-                line.vertexes.forEach(vertex => drawPixel(vertex.x, vertex.y, vertex.color))
+                line.vertexes.forEach(vertex => drawPixel(vertex.x, vertex.y, polygon.color))
             })
         })
 
         curves.forEach(curve => {
             curve.lines.forEach(line => {
-                line.vertexes.forEach(vertex => drawPixel(vertex.x, vertex.y, vertex.color))
+                line.vertexes.forEach(vertex => drawPixel(vertex.x, vertex.y, curve.color))
             })
         })
 
@@ -387,16 +426,59 @@ const Desk = () => {
     }, [editMode])
 
     return (
-        <DeskStyled $isEditing={isEditing} onClick={(e) => {
-            if (editMode) {
-                const h = window.innerHeight
-                const x = e.clientX
-                const y = h - e.clientY
-                const color = "white"
-                drawPixel(x, y, "red", 5, 5)
-                setPixelsToConnect([...pixelsToConnect, {x, y, color}])
-            }
-        }}>
+        <DeskStyled 
+            $isEditing={isEditing} 
+            onClick={(e) => {
+                if (editMode) {
+                    const h = window.innerHeight
+                    const x = e.clientX
+                    const y = h - e.clientY
+                    const color = "white"
+                    if (editMode !== "hermite_curve") {
+                        drawPixel(x, y, "red", 5, 5)
+                        setPixelsToConnect([...pixelsToConnect, {x, y, color}])
+                    }
+                }
+            }}
+            onMouseDown={(e) => {
+                if (editMode === "hermite_curve") {
+                    const h = window.innerHeight
+                    const x = e.clientX
+                    const y = h - e.clientY
+                    setVectorToConnect({origin: {x, y}, destination: {} as IVertex})
+                    setMouseIsDown(true)
+                    setPixelsToConnect([{x, y, color: "red"}])
+                    setLineId(-1)
+                }
+            }}
+            onMouseUp={(e) => {
+                if (editMode === "hermite_curve") {
+                    const h = window.innerHeight
+                    const x = e.clientX
+                    const y = h - e.clientY
+                    setVectorsToConnect([...vectorsToConnect, {...vectorToConnect, destination: {x,y}} as IVector])
+                    drawPixel(pixelsToConnect[0].x, pixelsToConnect[0].y, "red", 5, 5)
+                    setPixelsToConnect([])
+                    setVectorId(vectorId-1)
+                    setMouseIsDown(false)
+                }
+            }}
+            onMouseMove={(e) => {
+                if (editMode === "hermite_curve") {
+                    if (mouseIsDown ) {
+                        const h = window.innerHeight
+                        const x = e.clientX
+                        const y = h - e.clientY
+                        drawPixel(pixelsToConnect[0].x, pixelsToConnect[0].y, "red", 5, 5)
+                        setPixelsToConnect([pixelsToConnect[0], {x, y, color:"red"}])
+                        if (pixelsToConnect.length === 2) {
+                            drawLine("red", vectorId, false)
+                        }
+                        
+                    }
+                }
+            }}
+        >
             <canvas id={"canvas"}/>
             <EditIcon 
                 className="edit" 
@@ -418,14 +500,27 @@ const Desk = () => {
                         
                         }
 
-                        if (editMode === "curve") {
-                            drawCurve()
+                        if (editMode === "bezier_curve") {
+                            drawBezierCurve()
+                        }
+
+                        if (editMode === "hermite_curve") {
+                            drawHermiteCurve()
                         }
 
                         setEditMode(undefined)
                         setIsEditing(false)
                     }
                     
+                }}
+                onMouseDown={(e) => {
+                    e.stopPropagation()
+                }}
+                onMouseUp={(e) => {
+                    e.stopPropagation()
+                }}
+                onMouseMove={(e) => {
+                    e.stopPropagation()
                 }}
             />
             <>
@@ -489,27 +584,5 @@ const Desk = () => {
     );
 };
 
-function checkDrawLine() {
-    const pixels1_1 = DrawLine({x: 0, y: 0}, {x: 8, y: 3}).vertexes
-    const pixels1_2 = DrawLine({x: 8, y: 3}, {x: 0, y: 0}).vertexes.reverse()
-
-    const pixels2_1 = DrawLine({x: 0, y: 0}, {x: -8, y: -3}).vertexes
-    const pixels2_2 = DrawLine({x: -8, y: -3}, {x: 0, y: 0}).vertexes.reverse()
-
-    const pixels3_1 = DrawLine({x: 0, y: 0}, {x: -3, y: -8}).vertexes
-    const pixels3_2 = DrawLine({x: -3, y: -8}, {x: 0, y: 0}).vertexes.reverse()
-
-    console.log("0;0 and 8;3 in different orders")
-    console.log(pixels1_1, pixels1_2)
-    console.log("----------")
-
-    console.log("0;0 and -8;-3 in different orders")
-    console.log(pixels2_1, pixels2_2)
-    console.log("----------")
-
-    console.log("0;0 and -3;-8 in different orders")
-    console.log(pixels3_1, pixels3_2)
-    console.log("----------")
-}
 
 export default Desk;

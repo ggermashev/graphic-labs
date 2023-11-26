@@ -4,7 +4,7 @@ import {ILine} from "../interfaces/ILine";
 import { isEqual } from "./utils";
 
 
-export default function DrawLine(start: IVertex, end: IVertex, color?: string): ILine {
+export default function DrawLine(start: IVertex, end: IVertex, color?: string, id?: number): ILine {
     const savedEnd = end
 
     let pixels: IPixel[] = [];
@@ -56,7 +56,7 @@ export default function DrawLine(start: IVertex, end: IVertex, color?: string): 
     }
 
     const line: ILine = {
-        id: Math.random(),
+        id: id ?? Math.random(),
         vertexes: pixels,
         color: color
     };

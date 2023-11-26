@@ -102,10 +102,10 @@ const FillMenu = styled.div`
   }
 `
 
-const DeleteMenu = styled.div`
-`
+const DeleteMenu = styled.div``
 
-const TypeMenu = styled.div`
-`
+const TypeMenu = styled.div``
 
-export {DeskStyled, Box, MenuStyled, FillMenu, DeleteMenu, TypeMenu}
+const BoundingMenu = styled.div``
+
+export {DeskStyled, Box, MenuStyled, FillMenu, DeleteMenu, TypeMenu, BoundingMenu}

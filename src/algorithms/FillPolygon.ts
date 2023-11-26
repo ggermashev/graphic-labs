@@ -31,58 +31,29 @@ function fillEvenOdd(polygon: IPolygon, color: string) {
 
     const {left, top, right, bottom} = getPolygonBorders(polygon)
 
-    let x = 0;
-    let y = 0;
-    let intersectingPoints: IVertex[] = []
-
-    const generateRay = () => {
-        const length = right - left
-        x = Math.random() * length + left
-        y = top
-
-        intersectingPoints = []
-
-        for (let i = 0; i < lines.length; i++) {
-            intersectingPoints.push(lines[i].vertexes[0])
-            intersectingPoints.push(lines[i].vertexes.at(-1) || lines[i].vertexes[0])
-            for (let j = i + 1; j < lines.length; j++) {
-                if (areIntersecting(lines[i], lines[j])) {
-                    intersectingPoints.push(getIntersectingPoint(lines[i], lines[j]))
-                }
-            }
-        }
-    }
-
-    generateRay()
-
     const coloredVertexes: IPixel[] = []
 
     for (let vx = left; vx < right; vx++) {
 
         for (let vy = bottom; vy <top; vy++) {
             const vertex = {x: vx, y: vy}
+            let intersectingCount = 0
 
-            const fillColor = () => {
-                let intersectingCount = 0;
+            for (const line of lines) {
+                const edgeType = getEdgeType(vertex, line)
 
-                for (let line of lines) {
-                    if (areIntersecting(line, {vertexes: [vertex, {x, y}]} as ILine)) {
-                        const intersectingPoint = getIntersectingPoint(line, {vertexes: [vertex, {x, y}]} as ILine)
-                        if (intersectingPoints.includes(intersectingPoint)) {
-                            generateRay()
-                            fillColor()
-                            return
-                        }
-                        intersectingCount += 1
-                    } 
+                if (edgeType === "touching") {
+                    break;
                 }
 
-                if (intersectingCount % 2 !== 0) {
-                    coloredVertexes.push({...vertex, color: color})
+                if (edgeType === "cross_right" || edgeType === "cross_left") {
+                    intersectingCount++
                 }
             }
 
-            fillColor()
+            if (intersectingCount % 2 !== 0) {
+                coloredVertexes.push({...vertex, color})
+            }
         }
     }
 
@@ -92,7 +63,7 @@ function fillEvenOdd(polygon: IPolygon, color: string) {
 
 
 
-export function fillNonZeroWinding(polygon: IPolygon, color: string) {
+export function fillNonZeroWinding(polygon: IPolygon, color: string){
 
     if (!polygon) {
         return
@@ -103,65 +74,67 @@ export function fillNonZeroWinding(polygon: IPolygon, color: string) {
     }).flat()
 
     const {left, top, right, bottom} = getPolygonBorders(polygon)
-
-    let x = 0;
-    let y = 0;
-    let intersectingPoints: IVertex[] = []
-
-    const generateRay = () => {
-        const length = right - left
-        x = Math.random() * length + left
-        y = top
-
-        intersectingPoints = []
-
-        for (let i = 0; i < lines.length; i++) {
-            intersectingPoints.push(lines[i].vertexes[0])
-            intersectingPoints.push(lines[i].vertexes.at(-1) || lines[i].vertexes[0])
-            for (let j = i + 1; j < lines.length; j++) {
-                if (areIntersecting(lines[i], lines[j])) {
-                    intersectingPoints.push(getIntersectingPoint(lines[i], lines[j]))
-                }
-            }
-        }
-    }
-
-    generateRay()
-
+    
     const coloredVertexes: IPixel[] = []
 
     for (let vx = left; vx < right; vx++) {
 
-        for (let vy = bottom; vy < top; vy++) {
+        for (let vy = bottom; vy <top; vy++) {
             const vertex = {x: vx, y: vy}
+            let intersectingCount = 0
 
-            const fillColor = () => {
-                let windingNumber = 0;
+            for (const line of lines) {
+                const edgeType = getEdgeType(vertex, line)
 
-                for (let line of lines) {
-                    if (areIntersecting(line, {vertexes: [vertex, {x, y}]} as ILine)) {
-                        const intersectingPoint = getIntersectingPoint(line, {vertexes: [vertex, {x, y}]} as ILine)
-                        if (intersectingPoints.includes(intersectingPoint)) {
-                            generateRay()
-                            fillColor()
-                            return
-                        }
-                        const side = getPointSideForLine(vertex, line)
-                        if (side === "right") {
-                            windingNumber += 1
-                        } else if (side === "left") {
-                            windingNumber -= 1
-                        }
-                    }
+                if (edgeType === "touching") {
+                    break;
                 }
-                if (windingNumber !== 0) {
-                    coloredVertexes.push({...vertex, color: color})
+
+                if (edgeType === "cross_left") {
+                    intersectingCount--
+                }
+
+                if (edgeType === "cross_right" ) {
+                    intersectingCount++
                 }
             }
 
-            fillColor()
+            if (intersectingCount !== 0) {
+                coloredVertexes.push({...vertex, color})
+            }
         }
     }
 
     return coloredVertexes
+}
+
+function getEdgeType(checked: IVertex, edge: ILine): undefined | "cross_right" | "cross_left" | "inessential" | "touching" {
+    const start = edge.vertexes[0]
+    const end = edge.vertexes.at(-1)
+
+    if (!end) {
+        return
+    }
+
+    if (getPointSideForLine(checked, edge) === "left") {
+        if (checked.y > start.y && checked.y <= end.y) {
+            return "cross_left"
+        } else {
+            return "inessential"
+        }
+    }
+
+    if (getPointSideForLine(checked, edge) === "right") {
+        if (checked.y > end.y && checked.y <= start.y) {
+            return "cross_right"
+        } else {
+            return "inessential"
+        }
+    }
+
+    if (getPointSideForLine(checked, edge) === "destination") {
+        return "touching"
+    }
+
+    return "inessential"
 }

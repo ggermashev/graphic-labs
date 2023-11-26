@@ -1,52 +1,46 @@
 import {IPolygon} from "../interfaces/IPolygon";
 import {ILine} from "../interfaces/ILine";
-import {areIntersecting, getPointSideForLine} from "./utils";
+import {TPointSide, areIntersecting, getPointSideForLine} from "./utils";
+import IVertex from "../interfaces/IVertex";
+import DrawLine from "./DrawLine";
 
-export function getPolygonType(polygon: IPolygon) {
+export default function getPolygonType(polygon: IPolygon, toPrint=false) {
     return {
-        isConvex: isConvex(polygon),
+        isConvex: isConvex(polygon, toPrint),
         isSimple: isSimple(polygon)
     }
 }
 
-function isConvex(polygon: IPolygon) {
-    const lines = polygon.lines
+function isConvex(polygon: IPolygon, toPrint: boolean) {
 
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i]
-        const start = line.vertexes[0]
-        const end = line.vertexes.at(-1)
+    if (toPrint) {
+        const vertexes = polygon.lines.map(line => line.vertexes[0])
+        console.log(`vertexes: `, vertexes)
+    }
 
-        if (!end) {
-            continue
-        }
+    const vertexes = polygon.lines.map(line => line.vertexes[0])
 
-        //y = kx + b
-        const k = (end.y - start.y) / (end.x - start.x)
-        const b = start.y - k * start.x
+    let initialSide = getPointSideForLine(vertexes[0], DrawLine(vertexes[1], vertexes[2]))
 
-        let initialSide: "right" | "left" | undefined = undefined;
+    for (let i = 1; i < vertexes.length; i++) {
+        for (let j = 0; j < vertexes.length - 1; j++) {
+            const side = getPointSideForLine(vertexes[i], DrawLine(vertexes[j], vertexes[j+1]))
 
-        for (let j = 0; j !== i && j < lines.length; j++) {
-            const checkedLine = lines[j]
-
-            for (let vertex of checkedLine.vertexes) {
-                const side = getPointSideForLine(vertex, line)
-                
-                if (!side) {
-                    continue
-                }
-                if (!initialSide) {
-                    initialSide = side
-                }
-                else {
-                    if (side !== initialSide) {
-                        return false
+            if (initialSide && ["right", "left"].includes(initialSide) && side && ["right", "left"].includes(side)) {
+                if (side !== initialSide) {
+                    if (toPrint) {
+                        console.log(`vertex: ${i}; `, `line: ${j}-${j+1}`)
                     }
+                    return false
                 }
+            }
+
+            if (initialSide && !["right", "left"].includes(initialSide)) {
+                initialSide = side
             }
         }
     }
+
     return true
 }
 

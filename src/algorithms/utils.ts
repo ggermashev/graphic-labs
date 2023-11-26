@@ -114,7 +114,9 @@ export function getCurveBorders(curve: ICurve) {
     return {left, top, right, bottom}
 }
 
-export function getPointSideForLine(pixel: IVertex, line: ILine): "right" | "left" | null {
+export type TPointSide = "right" | "left" | "behind" | "before" | "origin" | "destination" | undefined
+
+export function getPointSideForLine(pixel: IVertex, line: ILine): TPointSide {
     const start = line.vertexes[0]
     const end = line.vertexes.at(-1)
 
@@ -130,15 +132,30 @@ export function getPointSideForLine(pixel: IVertex, line: ILine): "right" | "lef
     const s = ax * by - bx * ay
 
     if (s > 0) {
-        return "left"
+        return "right"
     } 
 
     if (s < 0) {
-        return "right"
+        return "left"
     }
 
-    return null
-    
+    if (ax * bx < 0 || ay * by < 0) {
+        return "behind"
+    }
+
+    if (ax * ax + ay * ay < bx * bx + by * by) {
+        return "before"
+    }
+
+    if (isEqual(start, pixel)) {
+        return "origin"
+    }
+
+    if (isEqual(end, pixel)) {
+        return "destination"
+    }
+
+    return;
 }
 
 export function isEqual(vertex1: IVertex, vertex2: IVertex, delta=1e-6) {
@@ -180,5 +197,5 @@ export function getLinesIntersectionType(line1: ILine, line2:ILine): "parallel" 
 }
 
 export function isPolygonClockWise(polygon: IPolygon) {
-    return getPointSideForLine(polygon.lines[0].vertexes[0], polygon.lines[1]) === "right"
+    return getPointSideForLine(polygon.lines[0].vertexes[0], polygon.lines[1]) === "left"
 }
