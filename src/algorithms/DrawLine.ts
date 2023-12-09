@@ -10,7 +10,7 @@ export default function DrawLine(start: IVertex, end: IVertex, color?: string, i
     let pixels: IPixel[] = [];
 
     if (!color) {
-        color = 'red';
+        color = 'white';
     }
 
     if (start.x > end.x) {

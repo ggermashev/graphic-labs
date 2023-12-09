@@ -1,262 +1,33 @@
-import EditIcon from '@mui/icons-material/Edit';
-import React, {FC, useCallback, useEffect, useState} from 'react';
-import {DeskStyled, Box, MenuStyled, FillMenu, DeleteMenu, TypeMenu, BoundingMenu} from "./Desk.styled";
+//general
+import { useCallback, useEffect, useState} from 'react';
 import {IPixel} from "../../interfaces/IPixel";
-import DrawPolygon from "../../algorithms/DrawPolygon";
 import {ILine} from "../../interfaces/ILine";
 import {IPolygon} from "../../interfaces/IPolygon";
-import {fillPolygonColor} from "../../algorithms/FillPolygon";
+import { ICurve } from '../../interfaces/ICurve';
+import IVertex from '../../interfaces/IVertex';
+import { TEditMode } from './types';
+
+//css
+import {DeskStyled, Box} from "./Desk.styled";
+
+//components
+import EditIcon from '@mui/icons-material/Edit';
+import { LineMenu } from './LineMenu/LineMenu';
+import { PolygonMenu } from './PolygonMenu/PolygonMenu';
+import { CurveMenu } from './CurveMenu/CurveMenu';
+import { DrawMenu } from './DrawMenu/DrawMenu';
+
+//functions
+import DrawPolygon from "../../algorithms/DrawPolygon";
 import {getPolygonBorders, getCurveBorders} from "../../algorithms/utils";
-import ModalWindow from "../ModalWindow/ModalWindow";
-import Button from "../../ui/Button/Button";
-import getPolygonType from "../../algorithms/GetPolygonType";
-import { HexColorPicker } from "react-colorful";
-import Select from '../../ui/Select/Select';
-import Pixel from '../Pixel/Pixel';
 import DrawLine from '../../algorithms/DrawLine';
 import  DrawBezierCurve  from '../../algorithms/DrawBezierCurve';
-import { ICurve } from '../../interfaces/ICurve';
 import  CyrusBeckClipLine from '../../algorithms/CyrusBeckClipLine';
-import getConvexBounding from "../../algorithms/GetConvexBounding"
 import drawHermiteCompoundCurve, { IVector } from '../../algorithms/DrawHermiteCompoundCurve';
-import IVertex from '../../interfaces/IVertex';
+import { Vertex3 } from '../../interfaces/IVertex3';
+import { Cube } from '../../interfaces/ICube';
+import { CubeMenu } from './CubeMenu/CubeMenu';
 
-
-type TEditMode = "line" | "polygon" | "bezier_curve" | "hermite_curve" | undefined
-
-
-interface ILineMenu {
-    pixels: IPixel[],
-    setPixels: (val: IPixel[]) => void,
-    lines: ILine[],
-    setLines: (val: ILine[]) => void,
-    isVisible: boolean,
-    setIsVisible: (val: boolean) => void,
-    lineId: number,
-    clearCanvas: (left: number, top: number, width: number, height: number) => void,
-    setIsClipping: (clipping: boolean) => void,
-    setIsEditing: (isEditing: boolean) => void,
-    setEditMode: (editMode: TEditMode) => void
-}
-
-const LineMenu: FC<ILineMenu> =({pixels, setPixels, lines, setLines, isVisible, setIsVisible, lineId, clearCanvas, setIsClipping, setIsEditing, setEditMode}) => {
-
-    return (
-        <ModalWindow isVisible={isVisible} setIsVisible={setIsVisible}>
-            <MenuStyled>
-                
-                <DeleteMenu style={{margin: "0 auto"}}>
-                    {/* Удалить */}
-                    <Button onClick={() => {
-                        const line = lines.filter(line => line.id === lineId)[0]
-                        const {left, top, right, bottom} = getPolygonBorders({lines: [line]} as IPolygon)
-                        const width = right - left
-                        const height = bottom - top
-                        clearCanvas(left, top, width, height)
-                        setLines(lines.filter(line => line.id !== lineId))
-                        setIsVisible(false)
-                    }}>
-                        Удалить
-                    </Button>
-                </DeleteMenu>
-
-                <div style={{margin: "0 auto"}}>
-                    <Button onClick={() => {
-                        setIsClipping(true)
-                        setIsEditing(true)
-                        setEditMode("polygon")
-                        setIsVisible(false)
-                    }}>
-                        Отсечь полигоном
-                    </Button>
-                </div>
-            </MenuStyled>
-        </ModalWindow>
-    )
-}
-
-
-interface IPolygonMenu {
-    pixels: IPixel[],
-    setPixels: (val: IPixel[]) => void,
-    polygons: IPolygon[],
-    setPolygons: (val: IPolygon[]) => void,
-    isVisible: boolean,
-    setIsVisible: (val: boolean) => void,
-    polygonId: number,
-    clearCanvas: (left: number, top: number, width: number, height: number) => void
-}
-
-const PolygonMenu: FC<IPolygonMenu> =({pixels, setPixels, polygons, setPolygons, isVisible, setIsVisible, polygonId, clearCanvas}) => {
-
-    const fillPolygon = useCallback((polygon: IPolygon, color: string, algorithm: "even-odd" | "non-zero-winding") => {
-        const coloredPixels = (fillPolygonColor(polygon, color, algorithm) as IPixel[])
-        setPixels(coloredPixels)
-    }, [pixels, polygons])
-
-    const [color, setColor] = useState("#aabbcc")
-
-    const [algorithm, setAlgorithm] = useState<"even-odd" | "non-zero-winding">("even-odd")
-    const defaultOption = "even-odd"
-    const options = ["non-zero-winding"]
-
-    return (
-        <ModalWindow isVisible={isVisible} setIsVisible={setIsVisible}>
-            <MenuStyled>
-                
-                <FillMenu>
-                    <Button onClick={() => {
-                        if (polygonId) {
-                            const polygon = polygons.filter(polygon => polygon.id === polygonId)[0]
-                            fillPolygon(polygon, color, algorithm)
-                        }
-                        setIsVisible(false)
-                    }}>
-                        Закрасить
-                    </Button>
-                    <Select title='Алгоритм' defaultOption={defaultOption} options={options} value={algorithm} setValue={setAlgorithm}/>
-                    <HexColorPicker className='color-picker' color={color} onChange={setColor} />
-                </FillMenu>
-
-                <TypeMenu>
-                    <Button onClick={() => {
-                        const polygon = polygons.filter(polygon => polygon.id === polygonId)[0]
-                        const {isConvex, isSimple} = getPolygonType(polygon, true)
-                        setIsVisible(false)
-                        alert(`${isConvex ? "Выпуклый" : "Невыпуклый"}\n${isSimple ? "Простой" : "Сложный"}`)
-                    }}>
-                        Тип
-                    </Button>
-                </TypeMenu>
-
-                <BoundingMenu>
-                    <Button onClick={() => {
-                        const polygon = polygons.filter(polygon => polygon.id === polygonId)[0]
-
-                        const boundingPolygon = getConvexBounding(polygon)
-                        if (boundingPolygon) {
-                            setPolygons([...polygons, boundingPolygon])
-                        }
-                        
-                        setIsVisible(false)
-                    }}>
-                        Оболочка
-                    </Button>
-                </BoundingMenu>
-
-                <DeleteMenu>
-                    <Button onClick={() => {
-                        const polygon = polygons.filter(polygon => polygon.id === polygonId)[0]
-                        const {left, top, right, bottom} = getPolygonBorders(polygon)
-                        const width = right - left
-                        const height = bottom - top
-                        clearCanvas(left, top, width, height)
-                        setPolygons(polygons.filter(polygon => polygon.id !== polygonId))
-                        setPixels(pixels.filter(pixel => {
-                            return (pixel.x < left || pixel.x > right) && (pixel.y < top || pixel.y > bottom)
-                        }))
-                        setIsVisible(false)
-                    }}>
-                        Удалить
-                    </Button>
-                </DeleteMenu>
-            </MenuStyled>
-        </ModalWindow>
-    )
-}
-
-interface ICurveMenu {
-    isVisible: boolean,
-    setIsVisible: (visible: boolean) => void,
-    curveId: number,
-    curves: ICurve[],
-    setCurves: (curves: ICurve[]) => void,
-    clearCanvas: (left: number, top: number, width: number, height: number) => void,
-    pixels: IPixel[],
-    setPixels: (val: IPixel[]) => void,
-}
-
-const CurveMenu: FC<ICurveMenu> = ({isVisible, setIsVisible, curveId, curves, setCurves, clearCanvas, pixels, setPixels}) => {
-    return (
-    <ModalWindow isVisible={isVisible} setIsVisible={setIsVisible}>
-
-        <MenuStyled>
-
-            <DeleteMenu style={{margin: "0 auto"}}>
-                {/* Удалить */}
-                <Button onClick={() => {
-                    const curve = curves.filter(curve => curve.id === curveId)[0]
-                    const {left, top, right, bottom} = getCurveBorders(curve)
-                    const width = right - left
-                    const height = bottom - top
-
-                    clearCanvas(left, top, width, height)
-                    setCurves(curves.filter(curve => curve.id !== curveId))
-                    setPixels(pixels.filter(pixel => {
-                        return (pixel.x < left || pixel.x > right) && (pixel.y < top || pixel.y > bottom)
-                    }))
-                    setIsVisible(false)
-                }}>
-                    Удалить
-                </Button>
-            </DeleteMenu>
-
-        </MenuStyled>
-
-    </ModalWindow>)
-}
-
-
-
-interface IDrawMenu {
-    isVisible: boolean,
-    setIsVisible: (visible: boolean) => void
-    setEditMode: (mode: TEditMode) => void,
-    setIsEditing: (isEditing: boolean) => void
-}
-
-
-const DrawMenu: FC<IDrawMenu> = ({isVisible, setIsVisible, setEditMode, setIsEditing}) => {
-    return (
-        <ModalWindow isVisible={isVisible} setIsVisible={setIsVisible}>
-            <MenuStyled style={{alignItems: "center"}}>
-
-                <Button onClick={() => {
-                    setEditMode("line")
-                    setIsEditing(true)
-                    setIsVisible(false)
-                }}>
-                    Прямая
-                </Button>
-
-                <Button onClick={() => {
-                    setEditMode("polygon")
-                    setIsEditing(true)
-                    setIsVisible(false)
-                }}>
-                    Полигон
-                </Button>
-
-                <Button onClick={() => {
-                    setEditMode("bezier_curve")
-                    setIsEditing(true)
-                    setIsVisible(false)
-                }}>
-                    Кривая Безье
-                </Button>
-
-                <Button onClick={() => {
-                    setEditMode("hermite_curve")
-                    setIsEditing(true)
-                    setIsVisible(false)
-                }}>
-                    Составная кривая Эрмита
-                </Button>
-
-            </MenuStyled>
-        </ModalWindow>
-    )
-}
 
 const Desk = () => {
 
@@ -264,6 +35,7 @@ const Desk = () => {
     const [lines, setLines] = useState<ILine[]>([])
     const [polygons, setPolygons] = useState<IPolygon[]>([])
     const [curves, setCurves] = useState<ICurve[]>([])
+    const [cubes, setCubes] = useState<Cube[]>([])
 
     const [lineMenuIsVisible, setLineMenuIsVisible] = useState(false)
     const [lineId, setLineId] = useState(0)
@@ -274,6 +46,12 @@ const Desk = () => {
 
     const [curveMenuIsVisible, setCurveMenuIsVisible] = useState(false)
     const [curveId, setCurveId] = useState(0)
+
+    const [cubeMenuIsVisible, setCubeMenuIsVisible] = useState(false)
+    const [cubeId, setCubeId] = useState(0)
+    const [rotateIntervals, setRotateIntervals] = useState<Record<string, NodeJS.Timer | undefined>>({})
+    const [hideFacesCubeIds, setHideFacesCubeIds] = useState<string[]>([])
+    const [showProjectionCubeIds, setShowProjectionCubeIds] = useState<string[]>([])
 
     const [drawMenuIsVisible, setDrawMenuIsVisible] = useState(false)
 
@@ -306,11 +84,12 @@ const Desk = () => {
         const canvas = document.querySelector('#canvas');
         
         const height = window.innerHeight
+        const width = window.innerWidth
         //@ts-ignore
         const context = canvas.getContext('2d');
         context.fillStyle = color || '#000';
     
-        context.fillRect(x, height - y, w, h);
+        context.fillRect(Math.round(width/2) + x, Math.round(height / 2) - y, w, h);
     }, [])
 
     const drawLine = useCallback((color="white", id?: number, clearPixels=true) => {
@@ -326,7 +105,7 @@ const Desk = () => {
             setPixelsToConnect([])
         }
         
-    }, [pixelsToConnect])
+    }, [pixelsToConnect, lines])
 
     const clipLine = useCallback(() => {
         const polygon = DrawPolygon(pixelsToConnect, "white")
@@ -372,6 +151,59 @@ const Desk = () => {
         setPixelsToConnect([])
     }, [pixelsToConnect])
 
+    const drawCube = useCallback(() => {
+        if (pixelsToConnect.length === 1) {
+            const cube = new Cube(new Vertex3({x: pixelsToConnect[0].x, y: 0, z: pixelsToConnect[0].y}), 200, 200, 200)
+            setCubes([...cubes, cube])
+        } else {
+            alert("must be 1 left-bottom point")
+            setCubes([...cubes])
+            setIsEditing(false)
+            setEditMode(undefined)
+        }
+        setPixelsToConnect([])
+    }, [pixelsToConnect, cubes])
+
+    const rotateCube = useCallback((cubeId: number) => {
+        if (pixelsToConnect.length === 1) {
+            const cube = cubes.filter(cube => cube.id === cubeId)[0]
+            setRotateIntervals({...rotateIntervals, 
+                [cubeId]: setInterval(() => {
+                    cube.rotate(0.1, new Vertex3({x: pixelsToConnect[0].x, y: 100, z: pixelsToConnect[0].y}))
+                    setCubes([...cubes])
+                }, 1) })
+                  
+        } else {
+            alert("must be 1 point: end of vector")
+        }
+        setPixelsToConnect([])
+    }, [pixelsToConnect, rotateIntervals, cubes])
+
+    useEffect(() => {
+        if (isEditing) {
+            const intervals: Record<string, NodeJS.Timer | undefined> = {}
+            Object.entries(rotateIntervals).forEach(([cubeId, timerId]) => {
+                clearInterval(timerId)
+                intervals[cubeId] = undefined
+            })
+            setRotateIntervals(intervals)
+        } else {
+            const intervals: Record<string, NodeJS.Timer> = {}
+            Object.keys(rotateIntervals).forEach((cubeId) => {
+                if (rotateIntervals[cubeId] === undefined) {
+                    const cube = cubes.filter(cube => cube.id.toString() === cubeId)[0]
+                    intervals[cubeId] = setInterval(() => {
+                            //@ts-ignore
+                            cube.rotate(0.1, cube.rotateDirection)
+                            setCubes([...cubes])
+                    }, 1)
+                }
+            })
+            setRotateIntervals({...rotateIntervals, ...intervals})
+        }
+        
+    }, [isEditing])
+
     const drawHermiteCurve = useCallback(() => {
         if (vectorsToConnect) {
             const curve = drawHermiteCompoundCurve(vectorsToConnect)
@@ -392,6 +224,7 @@ const Desk = () => {
     }, [])
 
     useEffect(() => {
+        
         clearCanvas()
         pixels.forEach(pixel => {
             drawPixel(pixel.x, pixel.y, pixel.color)
@@ -415,7 +248,19 @@ const Desk = () => {
             })
         })
 
-    }, [pixels, lines, polygons, curves])
+        cubes.forEach(cube => {
+            cube.getLines().forEach(line => {
+                line.vertexes.forEach(vertex => drawPixel(vertex.x, vertex.y, "white"))
+            })  
+
+            if (cube.showProjection) {
+                cube.getOnePointProjection(1e-3).forEach(line => {
+                    line.vertexes.forEach(vertex => drawPixel(vertex.x, vertex.y, "red"))
+                })  
+            }
+        })
+        
+    }, [pixels, lines, polygons, curves, cubes])
 
     useEffect(() => {
         if (pixelsToConnect.length) {
@@ -431,8 +276,8 @@ const Desk = () => {
             onClick={(e) => {
                 if (editMode) {
                     const h = window.innerHeight
-                    const x = e.clientX
-                    const y = h - e.clientY
+                    const x = e.clientX - Math.round(window.innerWidth / 2)
+                    const y = Math.round(h / 2) - e.clientY 
                     const color = "white"
                     if (editMode !== "hermite_curve") {
                         drawPixel(x, y, "red", 5, 5)
@@ -443,8 +288,8 @@ const Desk = () => {
             onMouseDown={(e) => {
                 if (editMode === "hermite_curve") {
                     const h = window.innerHeight
-                    const x = e.clientX
-                    const y = h - e.clientY
+                    const x = e.clientX - Math.round(window.innerWidth / 2)
+                    const y = Math.round(h / 2) - e.clientY 
                     setVectorToConnect({origin: {x, y}, destination: {} as IVertex})
                     setMouseIsDown(true)
                     setPixelsToConnect([{x, y, color: "red"}])
@@ -454,8 +299,8 @@ const Desk = () => {
             onMouseUp={(e) => {
                 if (editMode === "hermite_curve") {
                     const h = window.innerHeight
-                    const x = e.clientX
-                    const y = h - e.clientY
+                    const x = e.clientX - Math.round(window.innerWidth / 2)
+                    const y = Math.round(h / 2) - e.clientY 
                     setVectorsToConnect([...vectorsToConnect, {...vectorToConnect, destination: {x,y}} as IVector])
                     drawPixel(pixelsToConnect[0].x, pixelsToConnect[0].y, "red", 5, 5)
                     setPixelsToConnect([])
@@ -467,8 +312,8 @@ const Desk = () => {
                 if (editMode === "hermite_curve") {
                     if (mouseIsDown ) {
                         const h = window.innerHeight
-                        const x = e.clientX
-                        const y = h - e.clientY
+                        const x = e.clientX - Math.round(window.innerWidth / 2)
+                        const y = Math.round(h / 2) - e.clientY 
                         drawPixel(pixelsToConnect[0].x, pixelsToConnect[0].y, "red", 5, 5)
                         setPixelsToConnect([pixelsToConnect[0], {x, y, color:"red"}])
                         if (pixelsToConnect.length === 2) {
@@ -497,7 +342,6 @@ const Desk = () => {
                             } else {
                                clipLine()
                             }
-                        
                         }
 
                         if (editMode === "bezier_curve") {
@@ -506,6 +350,14 @@ const Desk = () => {
 
                         if (editMode === "hermite_curve") {
                             drawHermiteCurve()
+                        }
+
+                        if (editMode === "cube") {
+                            drawCube()
+                        }
+
+                        if (editMode === "vector") {
+                            rotateCube(cubeId)
                         }
 
                         setEditMode(undefined)
@@ -526,9 +378,11 @@ const Desk = () => {
             <>
 
                 {lines.map(line => {
-                    const {left, top, right, bottom} = getPolygonBorders({lines: [line]} as IPolygon)
+                    let {left, top, right, bottom} = getPolygonBorders({lines: [line]} as IPolygon)
                     const width = right - left
                     const height = top - bottom
+                    left += Math.round(window.innerWidth/2) 
+                    bottom += Math.round(window.innerHeight/2)
                     return <Box key={line.id} $isEditing={isEditing} style={{left, bottom, width, height}} onClick={() => {
                         if (!editMode) {
                             setLineId(line.id)
@@ -539,9 +393,11 @@ const Desk = () => {
                 })}
 
                 {polygons.map(polygon => {
-                    const {left, top, right, bottom} = getPolygonBorders(polygon)
+                    let {left, top, right, bottom} = getPolygonBorders(polygon)
                     const width = right - left
                     const height = top - bottom
+                    left += Math.round(window.innerWidth/2) 
+                    bottom += Math.round(window.innerHeight/2)
                     return <Box key={polygon.id} $isEditing={isEditing} style={{left, bottom, width, height}} onClick={() => {
                         if (!editMode) {
                             setPolygonId(polygon.id)
@@ -551,13 +407,29 @@ const Desk = () => {
                 })}
 
                 {curves.map(curve => {
-                    const {left, top, right, bottom} = getCurveBorders(curve)
+                    let {left, top, right, bottom} = getCurveBorders(curve)
                     const width = right - left
                     const height = top - bottom
+                    left += Math.round(window.innerWidth/2) 
+                    bottom += Math.round(window.innerHeight/2)
                     return <Box key={curve.id} $isEditing={isEditing} style={{left, bottom, width, height}} onClick={() => {
                         if (!editMode) {
                             setCurveId(curve.id)
                             setCurveMenuIsVisible(true)
+                        }
+                    }}/>
+                })}
+
+                {cubes.map(cube => {
+                   let {left, top, right, bottom} = cube.getBorders()
+                   const width = right - left
+                   const height = top - bottom
+                   left += Math.round(window.innerWidth/2) 
+                   bottom += Math.round(window.innerHeight/2)
+                    return <Box key={cube.id} $isEditing={isEditing} style={{left, bottom, width, height}} onClick={() => {
+                        if (!editMode) {
+                            setCubeId(cube.id)
+                            setCubeMenuIsVisible(true)
                         }
                     }}/>
                 })}
@@ -579,6 +451,7 @@ const Desk = () => {
             />
             <PolygonMenu pixels={pixels} setPixels={setPixels} polygons={polygons} setPolygons={setPolygons} isVisible={polygonMenuIsVisible} setIsVisible={setPolygonMenuIsVisible} polygonId={polygonId} clearCanvas={clearCanvas}/>
             <CurveMenu pixels={pixels} setPixels={setPixels} curves={curves} setCurves={setCurves} isVisible={curveMenuIsVisible} setIsVisible={setCurveMenuIsVisible} curveId={curveId} clearCanvas={clearCanvas}/>
+            <CubeMenu showProjectionCubeIds={showProjectionCubeIds} setShowProjectionCubeIds={setShowProjectionCubeIds} hideFacesCubeIds={hideFacesCubeIds} setHideFacesCubeIds={setHideFacesCubeIds} isVisible={cubeMenuIsVisible} setIsVisible={setCubeMenuIsVisible} setEditMode={setEditMode} setIsEditing={setIsEditing} cubeId={cubeId} cubes={cubes} setCubes={setCubes} rotateIntervals={rotateIntervals} setRotateIntervals={setRotateIntervals} clearCanvas={clearCanvas} pixels={pixels} setPixels={setPixels}/>
 
         </DeskStyled>
     );

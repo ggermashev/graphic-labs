@@ -18,6 +18,7 @@ const DeskStyled = styled.div<IDesk>`
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 
   ${props => props.$isEditing && css`
       cursor: pointer;
@@ -77,35 +78,4 @@ const Box = styled.div<IBox>`
   `}
 `
 
-const MenuStyled = styled.div`
-  width: 100%;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: start;
-  gap: 1em;
-`
-
-const FillMenu = styled.div`
-  width: 100%;
-  position: relative;
-
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: start;
-  gap: 1em;
-
-  .color-picker {
-    height: 10em;
-    width: 10em;
-  }
-`
-
-const DeleteMenu = styled.div``
-
-const TypeMenu = styled.div``
-
-const BoundingMenu = styled.div``
-
-export {DeskStyled, Box, MenuStyled, FillMenu, DeleteMenu, TypeMenu, BoundingMenu}
+export {DeskStyled, Box}
