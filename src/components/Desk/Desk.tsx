@@ -108,7 +108,7 @@ const Desk = () => {
     }, [pixelsToConnect, lines])
 
     const clipLine = useCallback(() => {
-        const polygon = DrawPolygon(pixelsToConnect, "white")
+        const polygon = DrawPolygon(pixelsToConnect, "green")
         const line = lines.filter(line => line.id === lineId)[0]
 
         const newLine = CyrusBeckClipLine(line, polygon)
@@ -119,7 +119,8 @@ const Desk = () => {
             return;
         }
 
-        setLines([...lines.filter(line => line.id !== lineId), newLine])
+        setLines([...lines, newLine])
+        setPolygons([...polygons, polygon])
         setIsClipping(false)
         setPixelsToConnect([])
     }, [pixelsToConnect])

@@ -37,7 +37,7 @@ export default function CyrusBeckClipLine(line: ILine, polygon: IPolygon): ILine
 
     let nx, ny, denom, num, x1_new, y1_new, x2_new, y2_new
 
-    for (let i = 0; i < n - 1; i++) {
+    for (let i = 0; i < n; i++) {
 
         if (!areIntersecting(line, polygon.lines[i])) {
             continue
@@ -76,8 +76,6 @@ export default function CyrusBeckClipLine(line: ILine, polygon: IPolygon): ILine
         
     }
 
-    console.log(t1, t2)
-
     if (t1 < t2) {
         x1_new = Math.round(x1 + t1 * (x2 - x1))
         y1_new = Math.round(y1 + t1 * (y2 - y1))
@@ -86,7 +84,7 @@ export default function CyrusBeckClipLine(line: ILine, polygon: IPolygon): ILine
         y2_new = Math.round(y1 + t2 * (y2 - y1))
     
     
-        return DrawLine({x: x1_new, y: y1_new}, {x: x2_new, y: y2_new}, line.color)
+        return DrawLine({x: x1_new, y: y1_new}, {x: x2_new, y: y2_new}, 'red')
     }
 
 }
