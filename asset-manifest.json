@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/graphic-labs/static/css/main.233b3b67.css",
-    "main.js": "/graphic-labs/static/js/main.7b1890ac.js",
+    "main.js": "/graphic-labs/static/js/main.87ac928b.js",
     "static/js/787.6074c9fb.chunk.js": "/graphic-labs/static/js/787.6074c9fb.chunk.js",
     "index.html": "/graphic-labs/index.html",
     "main.233b3b67.css.map": "/graphic-labs/static/css/main.233b3b67.css.map",
-    "main.7b1890ac.js.map": "/graphic-labs/static/js/main.7b1890ac.js.map",
+    "main.87ac928b.js.map": "/graphic-labs/static/js/main.87ac928b.js.map",
     "787.6074c9fb.chunk.js.map": "/graphic-labs/static/js/787.6074c9fb.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.233b3b67.css",
-    "static/js/main.7b1890ac.js"
+    "static/js/main.87ac928b.js"
   ]
 }
